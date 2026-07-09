@@ -35,7 +35,7 @@ _DISK_QUERIES: dict[str, str] = {
     # the stable identifier; the handler synthesizes `id` from `name`.
     "shares": "query GetSharesInfo { shares { name free used size include exclude cache nameOrig comment allocator splitLevel floor cow color luksStatus } }",
     "disks": "query ListPhysicalDisks { disks { id device name } }",
-    "disk_details": "query GetDiskDetails($id: PrefixedID!) { disk(id: $id) { id device name serialNum size temperature } }",
+    "disk_details": "query GetDiskDetails($id: PrefixedID!) { disk(id: $id) { id device name serialNum size temperature smartStatus type interfaceType vendor isSpinning } }",
     "log_files": "query ListLogFiles { logFiles { name path size modifiedAt } }",
     "logs": "query GetLogContent($path: String!, $lines: Int) { logFile(path: $path, lines: $lines) { path content totalLines startLine } }",
 }
@@ -229,6 +229,7 @@ async def _handle_disk(
                     "temperature": f"{raw['temperature']}\u00b0C"
                     if raw.get("temperature") is not None
                     else "N/A",
+                    "smart_status": raw.get("smartStatus"),
                 },
                 "details": raw,
             }
