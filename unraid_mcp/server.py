@@ -42,6 +42,7 @@ from .core.response_limit import StructuredResponseLimitingMiddleware
 from .subscriptions.manager import subscription_manager
 from .subscriptions.resources import register_subscription_resources
 from .tools.unraid import register_unraid_tool
+from .tools.unraid_actions import register_unraid_action_tools
 
 
 _LOOPBACK_HOSTNAMES = frozenset({"localhost"})
@@ -199,18 +200,26 @@ mcp = FastMCP(
 # run_server() no longer calls this — tools are registered exactly once here.
 
 
+# "split" (default) registers one tool per action (unraid_docker, unraid_vm, ...).
+# "consolidated" registers the single dispatch-style `unraid` tool instead.
+UNRAID_MCP_TOOL_MODE = os.environ.get("UNRAID_MCP_TOOL_MODE", "split").strip().lower()
+
+
 def register_all_modules() -> None:
     """Register all tools and resources with the MCP instance."""
     try:
-        # Register subscription resources (live data caches). The subscription
-        # diagnostics are exposed through the consolidated `unraid` tool's
-        # `subscriptions` action, not as standalone tools.
+        # Register subscription resources (live data caches). In "consolidated"
+        # mode, subscription diagnostics are exposed through the `unraid` tool's
+        # `subscriptions` action; in "split" mode via the `unraid_subscriptions` tool.
         register_subscription_resources(mcp)
         logger.info("Subscription resources registered")
 
-        # Register the consolidated unraid tool
-        register_unraid_tool(mcp)
-        logger.info("unraid tool registered successfully - Server ready!")
+        if UNRAID_MCP_TOOL_MODE == "consolidated":
+            register_unraid_tool(mcp)
+            logger.info("unraid tool registered successfully (consolidated mode) - Server ready!")
+        else:
+            register_unraid_action_tools(mcp)
+            logger.info("unraid action tools registered successfully (split mode) - Server ready!")
 
     except Exception as e:
         logger.error(f"Failed to register modules: {e}", exc_info=True)
